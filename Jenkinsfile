@@ -11,7 +11,7 @@ pipeline {
             steps {
                 git branch: 'main',   // change to 'master' if your repo uses master
                     url: 'https://github.com/webpsb85-ctrl/jenkinstudydemo.git',
-                    credentialsId: 'github-creds'
+                    credentialsId: 'github-credss'
             }
         }
 
