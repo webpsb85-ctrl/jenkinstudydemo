@@ -34,7 +34,7 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                bat 'copy target\\jenkinstudydemo.war C:\\apache-tomcat-10.1.0\\webapps\\jenkinstudydemo.war'
+                bat 'copy target\\jenkinstudydemo.war C:\\Program Files\\Apache Software Foundation\\Tomcat 11.0\\webappsjenkinstudydemo.war'
             }
         }
     }
