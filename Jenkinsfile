@@ -35,43 +35,91 @@ pipeline {
         stage('Deploy') {
             steps {
                 bat '''
-                    REM Stop Tomcat service
+                    setlocal enabledelayedexpansion
+                    
+                    REM Set Tomcat paths
+                    set TOMCAT_HOME=C:\\Program Files\\Apache Software Foundation\\Tomcat 11.0
+                    set CATALINA_HOME=%TOMCAT_HOME%
+                    set CATALINA_BASE=%TOMCAT_HOME%
+                    
+                    echo ========================================
                     echo Stopping Tomcat...
-                    net stop Tomcat11 || echo Tomcat was not running
+                    echo ========================================
                     
-                    REM Wait for service to stop
-                    timeout /t 5 /nobreak
+                    REM Kill all java processes (Tomcat)
+                    taskkill /F /IM java.exe 2>nul
                     
-                    REM Deploy WAR file
-                    echo Deploying application...
-                    copy "target\\studydevops-0.0.1-SNAPSHOT.war" "C:\\Program Files\\Apache Software Foundation\\Tomcat 11.0\\webapps\\studydevops.war"
-                    
-                    REM Wait a moment for file to be copied
-                    timeout /t 3 /nobreak
-                    
-                    REM Start Tomcat service
-                    echo Starting Tomcat...
-                    net start Tomcat11
-                    
-                    REM Wait for Tomcat to start
-                    timeout /t 10 /nobreak
-                    
-                    REM Check if Tomcat is running
-                    sc query Tomcat11 | find "RUNNING" >nul
-                    if errorlevel 1 (
-                        echo ERROR: Tomcat failed to start!
-                        exit /b 1
-                    ) else (
-                        echo SUCCESS: Tomcat is running!
+                    REM Wait using a simple loop
+                    for /l %%%%i in (1,1,5) do (
+                        ping -n 2 127.0.0.1 >nul
                     )
+                    
+                    echo ========================================
+                    echo Deploying WAR file...
+                    echo ========================================
+                    
+                    if exist "%TOMCAT_HOME%\\webapps\\studydevops" (
+                        echo Removing old application folder...
+                        rmdir /s /q "%TOMCAT_HOME%\\webapps\\studydevops" 2>nul
+                    )
+                    
+                    if exist "%TOMCAT_HOME%\\webapps\\studydevops.war" (
+                        echo Removing old WAR file...
+                        del /F /Q "%TOMCAT_HOME%\\webapps\\studydevops.war"
+                    )
+                    
+                    echo Copying new WAR file...
+                    copy "target\\studydevops-0.0.1-SNAPSHOT.war" "%TOMCAT_HOME%\\webapps\\studydevops.war"
+                    if errorlevel 1 (
+                        echo ERROR: Failed to copy WAR file!
+                        exit /b 1
+                    )
+                    
+                    echo ========================================
+                    echo Starting Tomcat using startup.bat...
+                    echo ========================================
+                    
+                    REM Start Tomcat using startup.bat
+                    start "" "%TOMCAT_HOME%\\bin\\startup.bat"
+                    
+                    REM Wait for Tomcat to fully start (ping delay)
+                    for /l %%%%i in (1,1,15) do (
+                        ping -n 2 127.0.0.1 >nul
+                    )
+                    
+                    echo ========================================
+                    echo Verifying Tomcat is running...
+                    echo ========================================
+                    
+                    REM Check if port 8088 is listening
+                    netstat -ano | find ":8088" >nul
+                    if errorlevel 1 (
+                        echo WARNING: Port 8088 not detected yet, waiting...
+                        for /l %%%%i in (1,1,10) do (
+                            ping -n 2 127.0.0.1 >nul
+                        )
+                        netstat -ano | find ":8088" >nul
+                        if errorlevel 1 (
+                            echo WARNING: Tomcat may still be starting, check logs manually
+                        ) else (
+                            echo SUCCESS: Tomcat is listening on port 8088!
+                        )
+                    ) else (
+                        echo SUCCESS: Tomcat is listening on port 8088!
+                    )
+                    
+                    echo ========================================
+                    echo Deployment completed!
+                    echo Application URL: http://localhost:8088/studydevops/
+                    echo ========================================
                 '''
             }
             post {
                 always {
-                    bat 'echo Deployment completed'
+                    bat 'echo Deployment stage completed'
                 }
                 failure {
-                    bat 'echo ERROR: Deployment failed - check Tomcat logs at C:\\Program Files\\Apache Software Foundation\\Tomcat 11.0\\logs\\'
+                    bat 'echo ERROR: Check Tomcat logs at "C:\\Program Files\\Apache Software Foundation\\Tomcat 11.0\\logs\\"'
                 }
             }
         }
