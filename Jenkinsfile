@@ -32,10 +32,12 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
-            steps {
-                bat 'copy target\\jenkinstudydemo.war C:\\Program Files\\Apache Software Foundation\\Tomcat 11.0\\webappsjenkinstudydemo.war'
-            }
-        }
+       stage('Deploy') {
+                   steps {
+                       bat '''
+                              copy "target\\studydevops-0.0.1-SNAPSHOT.war" "C:\\Program Files\\Apache Software Foundation\\Tomcat 11.0\\webapps\\studydevops.war"
+                           '''
+   				  }
+      }
     }
 }
